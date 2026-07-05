@@ -31,6 +31,11 @@ services:
       # /api/admin/* machine-to-machine. Must match the admin app's value. Empty
       # disables the service path (only session admins allowed).
       ADMIN_SERVICE_TOKEN: ${ADMIN_SERVICE_TOKEN:-}
+      # Habit integration: push "workout finished" events to habitmaxxing over
+      # the shared dokploy network so linked habits auto-complete. The token
+      # must match habitmaxxing's INTEGRATIONS_TOKEN; empty disables it.
+      HABITMAXXING_URL: ${HABITMAXXING_URL:-http://habitmaxxing-server:4000}
+      HABITMAXXING_INTEGRATIONS_TOKEN: ${HABITMAXXING_INTEGRATIONS_TOKEN:-}
     # Run migrations + seed against the shared DB, then start the compiled server.
     command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm start"
     networks:

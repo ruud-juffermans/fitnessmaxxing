@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../db.js';
 import { asyncRoute } from '../http.js';
 import { buildSetsFromSplit, nextSetNumber } from '../workoutSets.js';
+import { localDateOf, notifyHabitApp } from '../habitLink.js';
 
 export const workoutsRouter = Router();
 
@@ -135,6 +136,11 @@ workoutsRouter.post(
     });
     if (count === 0) return res.status(404).json({ error: 'Not found' });
     const workout = await prisma.workout.findUnique({ where: { id: req.params.id }, include: setsInclude });
+    // Auto-complete any habitmaxxing habit linked to fitness for this day.
+    // Guests are skipped: their synthetic emails can't match a habit account.
+    if (workout?.completedAt && !req.user!.isGuest) {
+      notifyHabitApp(req.user!.email, localDateOf(workout.completedAt), true);
+    }
     res.json(workout);
   }),
 );
@@ -143,10 +149,32 @@ workoutsRouter.post(
 workoutsRouter.delete(
   '/:id',
   asyncRoute(async (req, res) => {
-    const { count } = await prisma.workout.deleteMany({
+    const workout = await prisma.workout.findFirst({
       where: { id: req.params.id, userId: req.user!.id },
+      select: { id: true, completedAt: true },
     });
-    if (count === 0) return res.status(404).json({ error: 'Not found' });
+    if (!workout) return res.status(404).json({ error: 'Not found' });
+    await prisma.workout.delete({ where: { id: workout.id } });
+
+    // If a finished workout was discarded, re-report the day to habitmaxxing:
+    // still active when another finished workout shares the local day (compare
+    // date strings over a generous window rather than computing tz day bounds),
+    // otherwise the linked habit un-checks.
+    if (workout.completedAt && !req.user!.isGuest) {
+      const date = localDateOf(workout.completedAt);
+      const others = await prisma.workout.findMany({
+        where: {
+          userId: req.user!.id,
+          completedAt: {
+            gte: new Date(workout.completedAt.getTime() - 48 * 60 * 60 * 1000),
+            lte: new Date(workout.completedAt.getTime() + 48 * 60 * 60 * 1000),
+          },
+        },
+        select: { completedAt: true },
+      });
+      const stillActive = others.some((w) => w.completedAt && localDateOf(w.completedAt) === date);
+      notifyHabitApp(req.user!.email, date, stillActive);
+    }
     res.status(204).end();
   }),
 );
