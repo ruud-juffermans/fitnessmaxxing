@@ -4,12 +4,8 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-route
 import { GlobalStyle } from './global';
 import { themes, type ThemeMode } from './theme';
 import { useAuth } from './auth';
+import { redirectToLogin } from './api';
 import { Button } from './components/ui';
-import { Login } from './pages/auth/Login';
-import { Register } from './pages/auth/Register';
-import { ForgotPassword } from './pages/auth/ForgotPassword';
-import { ResetPassword } from './pages/auth/ResetPassword';
-import { VerifyEmail } from './pages/auth/VerifyEmail';
 import { Workout } from './pages/Workout';
 import { Plans } from './pages/Plans';
 import { PlanDetail } from './pages/PlanDetail';
@@ -40,29 +36,20 @@ export function App() {
       ) : user ? (
         <AuthedApp mode={mode} onToggleTheme={() => setMode(mode === 'dark' ? 'light' : 'dark')} />
       ) : (
-        <PublicRoutes />
+        <RedirectToAccount />
       )}
     </ThemeProvider>
   );
 }
 
-function RedirectToLogin() {
-  const location = useLocation();
-  const next = `${location.pathname}${location.search}`;
-  return <Navigate to={next && next !== '/' ? `/login?next=${encodeURIComponent(next)}` : '/login'} replace />;
-}
-
-function PublicRoutes() {
-  return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route path="*" element={<RedirectToLogin />} />
-    </Routes>
-  );
+// No login UI in this app anymore: authentication lives on the account app
+// (account.ruudjuffermans.nl). A signed-out visitor is handed off there and
+// comes straight back via return_url once the shared session cookie exists.
+function RedirectToAccount() {
+  useEffect(() => {
+    redirectToLogin();
+  }, []);
+  return <Center>Redirecting to sign in…</Center>;
 }
 
 interface NavItem {
@@ -162,8 +149,7 @@ function AuthedApp({ mode, onToggleTheme }: { mode: ThemeMode; onToggleTheme: ()
             path="/admin"
             element={user?.role === 'admin' ? <Users /> : <Navigate to="/workout" replace />}
           />
-          <Route path="/login" element={<Navigate to="/workout" replace />} />
-          <Route path="/register" element={<Navigate to="/workout" replace />} />
+          {/* Old auth routes (and stale email links) just land on the app. */}
           <Route path="*" element={<Navigate to="/workout" replace />} />
         </Routes>
       </Main>

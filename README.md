@@ -2,38 +2,23 @@
 
 Log your workouts. Build workout plans (e.g. a 3-day split), fill each split
 day ("Back & Biceps", "Chest & Triceps", …) with exercises, sets and reps, then
-start a workout from a split and log every set as you train.
+start a workout from a split and log every set as you train. Runs at
+`fitness.ruudjuffermans.nl`.
 
-Sibling app to [habitmaxxing](../habitmaxxing) — same stack, same architecture,
-same session/guest authentication model.
+**Client-only since the platform consolidation.** The backend lives in
+[`../ruudjuffermans-server`](../ruudjuffermans-server) (one API for all maxxing
+apps at `api.ruudjuffermans.nl`), and all auth UI lives in
+[`../ruudjuffermans-account`](../ruudjuffermans-account)
+(`account.ruudjuffermans.nl`) — sign in once there and you're signed in to
+every app. A signed-out visitor here is redirected to the account app and comes
+straight back after login. See `../PLATFORM_ARCHITECTURE_PLAN.md` for the
+architecture.
 
-## Stack
+Finishing a workout auto-completes any habitmaxxing habit linked to
+`fitness_workout` — handled by the platform's event bus, not this client.
 
-- **client/** — React 18 + TypeScript + Vite, styled-components (dark/light
-  theme), react-router. Served by nginx in production.
-- **server/** — Node 20 + Express + Prisma (PostgreSQL), zod validation,
-  cookie-based DB-backed sessions.
-- **Docker Compose** — production compose joins the shared infra networks; a
-  gitignored `docker-compose.override.yml` gives a self-contained local dev
-  stack with hot reload and its own Postgres.
-
-## Local development
-
-```bash
-./setup-dev.sh        # creates .env + docker-compose.override.yml
-docker compose up --build
-```
-
-- Client: http://localhost:3002 (demo account: `demo@fitnessmaxxing.local` / `password123`)
-- Server: http://localhost:4001 (API under `/api/...`)
-- DB: `localhost:5433` (`postgres` / `devpassword`)
-
-Ports are offset from habitmaxxing's (3000/4000/5432) so both dev stacks can
-run at the same time.
-
-Without Docker: run your own Postgres, set `DATABASE_URL`, then
-`npm install && npx prisma migrate deploy && npm run dev` in `server/` and
-`npm install && npm run dev` in `client/`.
+Stack: React 18 + TypeScript + Vite, styled-components (dark/light theme),
+react-router; served by nginx in production.
 
 ## Domain model
 
@@ -47,35 +32,49 @@ Without Docker: run your own Postgres, set `DATABASE_URL`, then
 
 Workout history is denormalised (exercise and split names are copied onto the
 workout/sets), so editing or deleting plans and exercises never rewrites what
-you actually did.
+you actually did. The tables live in the platform database's `fitness` schema
+(`../ruudjuffermans-server/prisma/schema.prisma`).
+
+## Local development
+
+Run the platform API and (for login) the account app first:
+
+```bash
+# 1. API — in ../ruudjuffermans-server (see its README):
+docker compose -f docker-compose.dev.yml up -d && npm run dev   # :4000
+
+# 2. Account app — in ../ruudjuffermans-account/client:
+npm run dev                                                     # :3004
+
+# 3. This client:
+cd client
+npm install
+npm run dev                                                     # :3000
+```
+
+The dev ports matter: the platform server's CORS allowlist expects this client
+on `http://localhost:3000` (its `FITNESS_URL` default). Configuration is via
+Vite env (see [`.env.example`](.env.example)): `VITE_API_URL`,
+`VITE_ACCOUNT_URL`, `VITE_APP_TZ`.
+
+> `server/` and `setup-dev.sh` are **legacy** (pre-consolidation) — no longer
+> deployed or maintained; kept only for reference until deleted.
 
 ## Authentication
 
-Same model as habitmaxxing — email/password with verification, password
-reset, DB-backed httpOnly cookie sessions, admin role + service-token admin
-API — plus a few improvements found while porting:
-
-- **Guest mode**: one click creates a real (pre-verified, `isGuest`) account so
-  every data route works unchanged; convert it to a full account from Settings
-  at any time and keep all data.
-- **Inactivity-based guest purge**: sessions track `lastUsedAt`; the
-  maintenance job only deletes guests idle for `GUEST_TTL_DAYS`, so an active
-  guest is never purged (habitmaxxing purges on account *age*).
-- **Sliding sessions**: active sessions are extended past the halfway point of
-  `SESSION_TTL_DAYS` instead of expiring mid-use.
-- **Rate limiting** on all sensitive auth endpoints (login, register,
-  forgot/reset password, resend verification, guest creation).
-- **No account-enumeration timing oracle**: login always performs a bcrypt
-  comparison, even for unknown emails.
-- **Self-cleaning**: the daily in-process maintenance job also prunes expired
-  sessions and used/expired verification tokens (`npm run maintenance` for
-  cron use).
-- Logging into a real account from a guest session deletes the now-orphaned
-  guest account immediately.
+Handled by the platform: email/password with verification, guest mode with
+one-click conversion, DB-backed httpOnly cookie sessions (one `rj_session`
+cookie shared by every app), rate limiting, sliding expiry, admin role +
+service-token admin API. This client only reads the session
+(`/api/account/auth/me`), signs out, converts guests, and changes passwords;
+register/login/reset live in the account app. The in-app admin pages call the
+central `/api/account/admin/*`.
 
 ## Deployment
 
-`docker-compose.yml` targets the ruudjuffermans-infra VPS setup: shared
-Postgres on the external `backend` network, Traefik routing on
-`dokploy-network`, migrations + seed run on server start. Configure via `.env`
-(see `.env.example`).
+`docker-compose.yml` builds the client into a static nginx image on the
+external `dokploy-network`; Traefik routes `fitness.ruudjuffermans.nl`
+(renamed from `fit.`) to it. Build args: `VITE_API_URL` (default
+`https://api.ruudjuffermans.nl`) and `VITE_ACCOUNT_URL` (default
+`https://account.ruudjuffermans.nl`). No server or database here — those
+belong to the `ruudjuffermans-server` stack.

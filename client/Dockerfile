@@ -17,10 +17,13 @@ RUN npm ci
 COPY tsconfig.json vite.config.ts index.html ./
 COPY src ./src
 
-# Vite inlines VITE_* env at build time. Pass the production API origin in.
-ARG VITE_API_URL=https://fit.ruudjuffermans.nl
+# Vite inlines VITE_* env at build time. Pass the production origins in:
+# the platform API (ruudjuffermans-server) and the central account app.
+ARG VITE_API_URL=https://api.ruudjuffermans.nl
+ARG VITE_ACCOUNT_URL=https://account.ruudjuffermans.nl
 ARG VITE_APP_TZ=Europe/Amsterdam
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_ACCOUNT_URL=$VITE_ACCOUNT_URL
 ENV VITE_APP_TZ=$VITE_APP_TZ
 
 RUN npm run build

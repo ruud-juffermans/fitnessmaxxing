@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import styled from 'styled-components';
-import { auth as authApi } from '../api';
+import { auth as authApi, accountDashboardUrl } from '../api';
 import { useAuth } from '../auth';
 import { Button, Input, Muted } from '../components/ui';
 
@@ -9,8 +9,15 @@ import { Button, Input, Muted } from '../components/ui';
 // signed-in identity and a change-password form. Matches Settings' Section style.
 export function AccountSection() {
   const { user } = useAuth();
-  if (user?.isGuest) return <ConvertSection />;
-  return <PasswordSection />;
+  return (
+    <>
+      {user?.isGuest ? <ConvertSection /> : <PasswordSection />}
+      <Muted>
+        Manage your profile and active sessions on your{' '}
+        <a href={accountDashboardUrl()}>ruudjuffermans account</a> — one account for all apps.
+      </Muted>
+    </>
+  );
 }
 
 // Upgrade a guest into a real account, keeping all of their existing data.

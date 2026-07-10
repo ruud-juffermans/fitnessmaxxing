@@ -2,11 +2,13 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { auth as authApi, ApiError } from './api';
 import type { AuthUser } from './types';
 
+// Session context against the platform API. This app has NO login UI anymore —
+// authentication happens on the account app; we only read the shared session
+// (App.tsx redirects there when it's missing). Guest conversion and sign-out
+// remain in-app.
 interface AuthState {
   user: AuthUser | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  guest: () => Promise<void>;
   convert: (data: { email: string; password: string; name?: string }) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -33,16 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh().finally(() => setLoading(false));
   }, []);
 
-  async function login(email: string, password: string) {
-    const { user } = await authApi.login({ email, password });
-    setUser(user);
-  }
-
-  async function guest() {
-    const { user } = await authApi.guest();
-    setUser(user);
-  }
-
   async function convert(data: { email: string; password: string; name?: string }) {
     const { user } = await authApi.convert(data);
     setUser(user);
@@ -57,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, guest, convert, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, convert, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

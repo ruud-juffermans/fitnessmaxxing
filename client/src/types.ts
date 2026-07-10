@@ -143,5 +143,6 @@ export interface AdminUser {
   role: 'user' | 'admin';
   disabledAt: string | null;
   createdAt: string;
-  _count: { plans: number; workouts: number; exercises: number };
+  // Platform-wide activity counts (one user row serves all maxxing apps).
+  _count: { journalEntries: number; workouts: number; habits: number };
 }

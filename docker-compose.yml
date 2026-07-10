@@ -1,66 +1,21 @@
+# fitnessmaxxing is now a CLIENT-ONLY deployment. Its backend moved into the
+# shared platform server (../ruudjuffermans-server → api.ruudjuffermans.nl),
+# and all auth UI moved to the account app (../ruudjuffermans-account →
+# account.ruudjuffermans.nl). The server/ directory in this repo is legacy and
+# no longer deployed.
 services:
-  server:
-    build: ./server
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      # Shared Postgres instance (provisioned by ruudjuffermans-infra), own database.
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/fitnessmaxxing?schema=public
-      SERVER_PORT: 4000
-      APP_TZ: ${APP_TZ:-Europe/Amsterdam}
-      APP_URL: ${APP_URL:-https://fit.ruudjuffermans.nl}
-      CORS_ORIGIN: ${CORS_ORIGIN:-https://fit.ruudjuffermans.nl}
-      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
-      EMAIL_VERIFICATION_TTL_HOURS: ${EMAIL_VERIFICATION_TTL_HOURS:-24}
-      PASSWORD_RESET_TTL_MINUTES: ${PASSWORD_RESET_TTL_MINUTES:-60}
-      GUEST_TTL_DAYS: ${GUEST_TTL_DAYS:-7}
-      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-fitnessmaxxing_session}
-      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
-      COOKIE_SECURE: ${COOKIE_SECURE:-true}
-      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_SECURE: ${SMTP_SECURE:-false}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      MAIL_FROM: ${MAIL_FROM:-fitnessmaxxing <no-reply@fit.ruudjuffermans.nl>}
-      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-}
-      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
-      # Shared secret that lets the central admin app (ruudjuffermans-infra) call
-      # /api/admin/* machine-to-machine. Must match the admin app's value. Empty
-      # disables the service path (only session admins allowed).
-      ADMIN_SERVICE_TOKEN: ${ADMIN_SERVICE_TOKEN:-}
-      # Habit integration: push "workout finished" events to habitmaxxing over
-      # the shared dokploy network so linked habits auto-complete. The token
-      # must match habitmaxxing's INTEGRATIONS_TOKEN; empty disables it.
-      HABITMAXXING_URL: ${HABITMAXXING_URL:-http://habitmaxxing-server:4000}
-      HABITMAXXING_INTEGRATIONS_TOKEN: ${HABITMAXXING_INTEGRATIONS_TOKEN:-}
-    # Run migrations + seed against the shared DB, then start the compiled server.
-    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm start"
-    networks:
-      # "backend" to reach the db; "dokploy-network" so Traefik can route /api/*.
-      backend: {}
-      # Stable alias so the central admin app can reach this server at a fixed
-      # name regardless of the container name Dokploy generates.
-      dokploy-network:
-        aliases:
-          - fitnessmaxxing-server
-
   client:
     build:
       context: ./client
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://fit.ruudjuffermans.nl}
+        VITE_API_URL: ${VITE_API_URL:-https://api.ruudjuffermans.nl}
+        VITE_ACCOUNT_URL: ${VITE_ACCOUNT_URL:-https://account.ruudjuffermans.nl}
         VITE_APP_TZ: ${VITE_APP_TZ:-Europe/Amsterdam}
     restart: unless-stopped
     networks:
       - dokploy-network
 
 networks:
-  # Shared DB network created by the ruudjuffermans-infra stack; bring it up first.
-  backend:
-    external: true
-  # Dokploy's proxy network; Traefik routes public traffic to services on it.
+  # Dokploy's proxy network; Traefik routes fitness.ruudjuffermans.nl here.
   dokploy-network:
     external: true

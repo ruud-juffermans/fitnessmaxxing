@@ -127,7 +127,7 @@ export function Users() {
                     </Td>
                     <Td>
                       <Muted>
-                        {u._count.plans} plans · {u._count.workouts} workouts · {u._count.exercises} exercises
+                        {u._count.workouts} workouts · {u._count.journalEntries} journal entries · {u._count.habits} habits
                       </Muted>
                     </Td>
                     <Td>
