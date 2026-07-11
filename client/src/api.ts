@@ -75,16 +75,14 @@ const patch = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
 const del = (path: string) => request<void>(path, { method: 'DELETE' });
 
-// Account endpoints still used from inside the app: session check, sign-out,
-// guest conversion and password change (the Settings page). Registration,
-// login, guest start and password reset all live in the account app now.
+// Account endpoints still used from inside the app: session check, sign-out
+// and guest conversion (the Settings page). Registration, login, guest start,
+// password reset and password change all live in the account app now.
 export const auth = {
   convert: (data: { email: string; password: string; name?: string }) =>
     post<{ user: AuthUser }>('/api/account/auth/convert', data),
   logout: () => post<{ ok: true }>('/api/account/auth/logout'),
   me: () => request<{ user: AuthUser }>('/api/account/auth/me'),
-  changePassword: (data: { currentPassword: string; newPassword: string }) =>
-    post<{ ok: true }>('/api/account/auth/change-password', data),
 };
 
 export interface ExerciseInput {

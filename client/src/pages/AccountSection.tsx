@@ -1,19 +1,20 @@
 import { useState, type FormEvent } from 'react';
 import styled from 'styled-components';
-import { auth as authApi, accountDashboardUrl } from '../api';
+import { accountDashboardUrl } from '../api';
 import { useAuth } from '../auth';
 import { Button, Input, Muted } from '../components/ui';
 
 // "Account" panel for the Settings page. For a guest it offers a "create your
 // account" form (claiming the trial data); for a real user it shows the
-// signed-in identity and a change-password form. Matches Settings' Section style.
+// signed-in identity. Password changes live in the central account app.
+// Matches Settings' Section style.
 export function AccountSection() {
   const { user } = useAuth();
   return (
     <>
-      {user?.isGuest ? <ConvertSection /> : <PasswordSection />}
+      {user?.isGuest ? <ConvertSection /> : <SignedInSection />}
       <Muted>
-        Manage your profile and active sessions on your{' '}
+        Manage your profile, password and active sessions on your{' '}
         <a href={accountDashboardUrl()}>ruudjuffermans account</a> — one account for all apps.
       </Muted>
     </>
@@ -102,81 +103,12 @@ function ConvertSection() {
   );
 }
 
-function PasswordSection() {
+function SignedInSection() {
   const { user } = useAuth();
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setOk(false);
-    if (next.length < 8) {
-      setError('New password must be at least 8 characters.');
-      return;
-    }
-    if (next !== confirm) {
-      setError('New passwords do not match.');
-      return;
-    }
-    setBusy(true);
-    try {
-      await authApi.changePassword({ currentPassword: current, newPassword: next });
-      setOk(true);
-      setCurrent('');
-      setNext('');
-      setConfirm('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not change password.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <Section>
       <SectionTitle>Account</SectionTitle>
       <Muted>Signed in as {user?.email}</Muted>
-
-      <Form onSubmit={onSubmit}>
-        <Subtitle>Change password</Subtitle>
-        {error && <Msg $error>{error}</Msg>}
-        {ok && <Msg>Password updated. Other sessions have been signed out.</Msg>}
-        <Grid>
-          <Input
-            type="password"
-            placeholder="Current password"
-            autoComplete="current-password"
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-            required
-          />
-          <Input
-            type="password"
-            placeholder="New password"
-            autoComplete="new-password"
-            value={next}
-            onChange={(e) => setNext(e.target.value)}
-            required
-            minLength={8}
-          />
-          <Input
-            type="password"
-            placeholder="Confirm new password"
-            autoComplete="new-password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            required
-          />
-          <Button type="submit" variant="primary" disabled={busy}>
-            {busy ? 'Saving…' : 'Update password'}
-          </Button>
-        </Grid>
-      </Form>
     </Section>
   );
 }
@@ -196,11 +128,6 @@ const Section = styled.section`
 const SectionTitle = styled.h2`
   font-size: ${({ theme }) => theme.fontSizes.lg};
   margin: 0 0 ${({ theme }) => theme.space.md};
-`;
-
-const Subtitle = styled.h3`
-  font-size: ${({ theme }) => theme.fontSizes.md};
-  margin: 0;
 `;
 
 const Form = styled.form`
