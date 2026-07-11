@@ -28,9 +28,14 @@ export function redirectToLogin(): void {
   window.location.assign(`${accountUrl}/login?return_url=${returnUrl}&app=fitness`);
 }
 
-// Deep link into the account dashboard (profile, sessions, sign out everywhere).
+// Deep link into the account dashboard (apps overview; guests convert there).
 export function accountDashboardUrl(): string {
   return accountUrl;
+}
+
+// Deep link into the account settings page (profile, password, sessions).
+export function accountSettingsUrl(): string {
+  return `${accountUrl}/settings`;
 }
 
 export class ApiError extends Error {

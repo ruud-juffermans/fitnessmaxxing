@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { accountDashboardUrl } from '../api';
+import { accountDashboardUrl, accountSettingsUrl } from '../api';
 import { useAuth } from '../auth';
 import { Muted } from '../components/ui';
 
@@ -29,7 +29,7 @@ export function AccountSection() {
       </Section>
       <Muted>
         Manage your profile, password and active sessions on your{' '}
-        <a href={accountDashboardUrl()}>ruudjuffermans account</a> — one account for all apps.
+        <a href={accountSettingsUrl()}>ruudjuffermans account</a> — one account for all apps.
       </Muted>
     </>
   );
