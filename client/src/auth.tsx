@@ -4,12 +4,10 @@ import type { AuthUser } from './types';
 
 // Session context against the platform API. This app has NO login UI anymore —
 // authentication happens on the account app; we only read the shared session
-// (App.tsx redirects there when it's missing). Guest conversion and sign-out
-// remain in-app.
+// (App.tsx redirects there when it's missing). Only sign-out remains in-app.
 interface AuthState {
   user: AuthUser | null;
   loading: boolean;
-  convert: (data: { email: string; password: string; name?: string }) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -35,11 +33,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh().finally(() => setLoading(false));
   }, []);
 
-  async function convert(data: { email: string; password: string; name?: string }) {
-    const { user } = await authApi.convert(data);
-    setUser(user);
-  }
-
   async function logout() {
     try {
       await authApi.logout();
@@ -49,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, convert, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );
