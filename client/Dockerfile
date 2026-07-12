@@ -16,6 +16,7 @@ RUN npm ci
 
 COPY tsconfig.json vite.config.ts index.html ./
 COPY src ./src
+COPY public ./public
 
 # Vite inlines VITE_* env at build time. Pass the production origins in:
 # the platform API (ruudjuffermans-server) and the central account app.
