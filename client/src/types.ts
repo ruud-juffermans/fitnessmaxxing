@@ -66,7 +66,6 @@ export interface SplitExercise {
   targetSets: number;
   targetReps: number;
   targetWeight: number | null;
-  restSeconds: number | null;
   notes: string | null;
   exercise: Pick<Exercise, 'id' | 'name' | 'muscleGroup' | 'equipment' | 'archived'>;
 }

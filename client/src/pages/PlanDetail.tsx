@@ -111,6 +111,15 @@ export function PlanDetail() {
     await reloadSplit();
   }
 
+  async function onMoveExercise(index: number, delta: -1 | 1) {
+    if (!split) return;
+    const target = index + delta;
+    if (target < 0 || target >= split.exercises.length) return;
+    const ids = split.exercises.map((e) => e.id);
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+    setSplit(await api.reorderSplitExercises(split.id, ids));
+  }
+
   async function onStartWorkout() {
     if (!split) return;
     setStartBusy(true);
@@ -195,12 +204,11 @@ export function PlanDetail() {
                   <th>Sets</th>
                   <th>Reps</th>
                   <th>Weight (kg)</th>
-                  <th>Rest (s)</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {split.exercises.map((item) => (
+                {split.exercises.map((item, i) => (
                   <tr key={item.id}>
                     <td data-label="Exercise">
                       <strong>{item.exercise.name}</strong>
@@ -246,24 +254,22 @@ export function PlanDetail() {
                         }}
                       />
                     </td>
-                    <td data-label="Rest">
-                      <NumInput
-                        key={`rest-${item.id}-${item.restSeconds}`}
-                        type="number"
-                        min={0}
-                        step={15}
-                        placeholder="—"
-                        defaultValue={item.restSeconds ?? ''}
-                        onBlur={(e) => {
-                          const v = e.target.value === '' ? null : Number(e.target.value);
-                          if (v !== item.restSeconds) onPatchPrescription(item.id, { restSeconds: v });
-                        }}
-                      />
-                    </td>
                     <td>
-                      <SmallBtn variant="danger" onClick={() => onRemoveExercise(item.id)}>
-                        Remove
-                      </SmallBtn>
+                      <RowActions>
+                        <SmallBtn onClick={() => onMoveExercise(i, -1)} disabled={i === 0} aria-label="Move up">
+                          ↑
+                        </SmallBtn>
+                        <SmallBtn
+                          onClick={() => onMoveExercise(i, 1)}
+                          disabled={i === split.exercises.length - 1}
+                          aria-label="Move down"
+                        >
+                          ↓
+                        </SmallBtn>
+                        <SmallBtn variant="danger" onClick={() => onRemoveExercise(item.id)}>
+                          Remove
+                        </SmallBtn>
+                      </RowActions>
                     </td>
                   </tr>
                 ))}
@@ -485,6 +491,17 @@ const SmallBtn = styled(Button)`
   min-height: 30px;
   padding: 4px 10px;
   font-size: ${({ theme }) => theme.fontSizes.xs};
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+`;
+
+const RowActions = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.space.xs};
+  justify-content: flex-end;
 `;
 
 const ErrorMsg = styled.div`

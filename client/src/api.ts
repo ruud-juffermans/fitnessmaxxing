@@ -78,6 +78,8 @@ const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });
 const patch = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
+const put = <T>(path: string, body: unknown) =>
+  request<T>(path, { method: 'PUT', body: JSON.stringify(body) });
 const del = (path: string) => request<void>(path, { method: 'DELETE' });
 
 // Account endpoints still used from inside the app: session check and
@@ -100,7 +102,6 @@ export interface PrescriptionInput {
   targetSets: number;
   targetReps: number;
   targetWeight?: number | null;
-  restSeconds?: number | null;
   notes?: string | null;
   sortOrder?: number;
 }
@@ -132,6 +133,8 @@ export const api = {
   updateSplitExercise: (id: string, data: Partial<PrescriptionInput>) =>
     patch<SplitExercise>(`/api/fitness/splits/exercises/${id}`, data),
   removeSplitExercise: (id: string) => del(`/api/fitness/splits/exercises/${id}`),
+  reorderSplitExercises: (splitId: string, ids: string[]) =>
+    put<SplitDetail>(`/api/fitness/splits/${splitId}/exercises/order`, { ids }),
 
   // Workouts
   listWorkouts: (limit = 50) => request<Workout[]>(`/api/fitness/workouts?limit=${limit}`),
